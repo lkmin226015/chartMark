@@ -1,0 +1,27 @@
+1. 설명가능한 전략을 구현해주기 -> 단순 AI 모델 구조 학습과 계산 로직 다양화로 가능함
+
+2. 설명 불가능한데 원하는 지점만 있을 때 그 지점을 찾는 전략을 구현해주기 -> 원하는 지점을 기반으로 reverse 엔지니어링 해서 구현해주기
+-> 왜 유사차트 찾아주는 NH금융 앱을 안썼나?
+
+3️⃣ 강화 학습 기반 탐색 (Reinforcement Learning, RL)
+✅ 사용 가능 상황:
+
+설명 불가능한 패턴을 학습하고 싶은 경우
+환경과의 상호작용이 필요한 문제
+🔹 기법 설명
+
+Q-Learning, DQN (Deep Q-Network), Policy Gradient 등의 알고리즘을 활용하여
+최적 지점을 찾아가는 탐색 과정 자체를 학습
+🔹 적용 방법
+
+상태(state), 행동(action), 보상(reward) 정의
+환경과 상호작용하면서 경험을 수집
+보상을 최대화하는 방향으로 학습
+정책(policy)을 최적화하여 원하는 지점 찾기
+📌 예제 사용 분야:
+
+로봇이 환경을 탐색하며 목표 지점 찾기
+게임 AI 학습
+강화 학습을 활용한 최적의 금융 전략 찾기
+
+Bai, Yuntao, et al. "Training a helpful and harmless assistant with reinforcement learning from human feedback." arXiv preprint arXiv:2204.05862 (2022).
