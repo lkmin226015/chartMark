@@ -69,23 +69,111 @@ def collect_stock_data(ticker, interval="1d"):
 
 def main():
     # 기본 티커 목록
-    tickers = [
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'INTC', 'AMD',
-        'JPM', 'BAC', 'WFC', 'GS', 'V', 'MA',
-        'KO', 'PEP', 'MCD', 'SBUX', 'NKE', 'DIS', 'NFLX'
+    tickers = {
+        # 기술주
+        'AAPL': 'Apple Inc.',
+        'MSFT': 'Microsoft',
+        'GOOGL': 'Alphabet (Google)',
+        'AMZN': 'Amazon',
+        'META': 'Meta Platforms',
+        'NVDA': 'NVIDIA',
+        'TSLA': 'Tesla',
+        'INTC': 'Intel',
+        'AMD': 'Advanced Micro Devices',
+        'CRM': 'Salesforce',
+        'ADBE': 'Adobe',
+        'ORCL': 'Oracle',
+        'CSCO': 'Cisco',
+        
+        # 금융
+        'JPM': 'JPMorgan Chase',
+        'BAC': 'Bank of America',
+        'WFC': 'Wells Fargo',
+        'GS': 'Goldman Sachs',
+        'V': 'Visa',
+        'MA': 'Mastercard',
+        
+        # 소비재
+        'KO': 'Coca-Cola',
+        'PEP': 'PepsiCo',
+        'MCD': "McDonald's",
+        'SBUX': 'Starbucks',
+        'NKE': 'Nike',
+        'DIS': 'Disney',
+        'NFLX': 'Netflix',
+        'WMT': 'Walmart',
+        'COST': 'Costco',
+        'TGT': 'Target',
+        
+        # 헬스케어
+        'JNJ': 'Johnson & Johnson',
+        'PFE': 'Pfizer',
+        'MRNA': 'Moderna',
+        'UNH': 'UnitedHealth',
+        'ABT': 'Abbott Laboratories',
+        
+        # 통신
+        'T': 'AT&T',
+        'VZ': 'Verizon',
+        
+        # 에너지
+        'XOM': 'ExxonMobil',
+        'CVX': 'Chevron',
+        
+        # 산업재
+        'BA': 'Boeing',
+        'CAT': 'Caterpillar',
+        'GE': 'General Electric',
+        'MMM': '3M',
+        
+        # 자동차
+        'F': 'Ford',
+        'GM': 'General Motors',
+        
+        # 반도체
+        'TSM': 'Taiwan Semiconductor',
+        'QCOM': 'Qualcomm',
+        'TXN': 'Texas Instruments',
+        
+        # 엔터테인먼트/게임
+        'EA': 'Electronic Arts',
+        'TTWO': 'Take-Two Interactive',
+        
+        # 기타 테크
+        'ZM': 'Zoom',
+        'UBER': 'Uber',
+        'ABNB': 'Airbnb',
+        'SQ': 'Block (Square)',
+        'PYPL': 'PayPal',
+        'SHOP': 'Shopify'
+    }
+    
+    # 모든 간격 설정
+    intervals = [
+        "1m", "2m", "5m", "15m", "30m",
+        "60m", "90m", "1h",
+        "1d", "5d", "1wk", "1mo", "3mo"
     ]
     
-    # 수집할 간격 설정
-    intervals = ["1d"]  # 필요한 간격 추가 가능
+    # 진행 상황 표시를 위한 총 작업 수 계산
+    total_tasks = len(tickers) * len(intervals)
+    completed_tasks = 0
     
     # 각 티커와 간격에 대해 데이터 수집
     for interval in intervals:
         print(f"\nCollecting {interval} data...")
-        for ticker in tickers:
+        for ticker in tickers.keys():
+            completed_tasks += 1
+            print(f"Progress: {completed_tasks}/{total_tasks} ({(completed_tasks/total_tasks)*100:.1f}%)")
+            
             collect_stock_data(ticker, interval)
             # API 제한을 위한 대기
             import time
-            time.sleep(1)
+            time.sleep(1)  # 1초 대기
+            
+            # 분봉 데이터의 경우 더 긴 대기 시간 적용
+            if interval in ["1m", "2m", "5m", "15m", "30m"]:
+                time.sleep(2)  # 추가 2초 대기
 
 if __name__ == "__main__":
     main() 
