@@ -238,67 +238,67 @@ def main():
         'ORCL': 'Oracle',
         'CSCO': 'Cisco',
         
-        # 금융
-        'JPM': 'JPMorgan Chase',
-        'BAC': 'Bank of America',
-        'WFC': 'Wells Fargo',
-        'GS': 'Goldman Sachs',
-        'V': 'Visa',
-        'MA': 'Mastercard',
+        # # 금융
+        # 'JPM': 'JPMorgan Chase',
+        # 'BAC': 'Bank of America',
+        # 'WFC': 'Wells Fargo',
+        # 'GS': 'Goldman Sachs',
+        # 'V': 'Visa',
+        # 'MA': 'Mastercard',
         
-        # 소비재
-        'KO': 'Coca-Cola',
-        'PEP': 'PepsiCo',
-        'MCD': "McDonald's",
-        'SBUX': 'Starbucks',
-        'NKE': 'Nike',
-        'DIS': 'Disney',
-        'NFLX': 'Netflix',
-        'WMT': 'Walmart',
-        'COST': 'Costco',
-        'TGT': 'Target',
+        # # 소비재
+        # 'KO': 'Coca-Cola',
+        # 'PEP': 'PepsiCo',
+        # 'MCD': "McDonald's",
+        # 'SBUX': 'Starbucks',
+        # 'NKE': 'Nike',
+        # 'DIS': 'Disney',
+        # 'NFLX': 'Netflix',
+        # 'WMT': 'Walmart',
+        # 'COST': 'Costco',
+        # 'TGT': 'Target',
         
-        # 헬스케어
-        'JNJ': 'Johnson & Johnson',
-        'PFE': 'Pfizer',
-        'MRNA': 'Moderna',
-        'UNH': 'UnitedHealth',
-        'ABT': 'Abbott Laboratories',
+        # # 헬스케어
+        # 'JNJ': 'Johnson & Johnson',
+        # 'PFE': 'Pfizer',
+        # 'MRNA': 'Moderna',
+        # 'UNH': 'UnitedHealth',
+        # 'ABT': 'Abbott Laboratories',
         
-        # 통신
-        'T': 'AT&T',
-        'VZ': 'Verizon',
+        # # 통신
+        # 'T': 'AT&T',
+        # 'VZ': 'Verizon',
         
-        # 에너지
-        'XOM': 'ExxonMobil',
-        'CVX': 'Chevron',
+        # # 에너지
+        # 'XOM': 'ExxonMobil',
+        # 'CVX': 'Chevron',
         
-        # 산업재
-        'BA': 'Boeing',
-        'CAT': 'Caterpillar',
-        'GE': 'General Electric',
-        'MMM': '3M',
+        # # 산업재
+        # 'BA': 'Boeing',
+        # 'CAT': 'Caterpillar',
+        # 'GE': 'General Electric',
+        # 'MMM': '3M',
         
-        # 자동차
-        'F': 'Ford',
-        'GM': 'General Motors',
+        # # 자동차
+        # 'F': 'Ford',
+        # 'GM': 'General Motors',
         
-        # 반도체
-        'TSM': 'Taiwan Semiconductor',
-        'QCOM': 'Qualcomm',
-        'TXN': 'Texas Instruments',
+        # # 반도체
+        # 'TSM': 'Taiwan Semiconductor',
+        # 'QCOM': 'Qualcomm',
+        # 'TXN': 'Texas Instruments',
         
-        # 엔터테인먼트/게임
-        'EA': 'Electronic Arts',
-        'TTWO': 'Take-Two Interactive',
+        # # 엔터테인먼트/게임
+        # 'EA': 'Electronic Arts',
+        # 'TTWO': 'Take-Two Interactive',
         
-        # 기타 테크
-        'ZM': 'Zoom',
-        'UBER': 'Uber',
-        'ABNB': 'Airbnb',
-        'SQ': 'Block (Square)',
-        'PYPL': 'PayPal',
-        'SHOP': 'Shopify'
+        # # 기타 테크
+        # 'ZM': 'Zoom',
+        # 'UBER': 'Uber',
+        # 'ABNB': 'Airbnb',
+        # 'SQ': 'Block (Square)',
+        # 'PYPL': 'PayPal',
+        # 'SHOP': 'Shopify'
     }
     
     # 설명 추가
