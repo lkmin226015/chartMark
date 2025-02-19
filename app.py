@@ -3,8 +3,9 @@ import pandas as pd
 from strategy_analysis import analyze_strategy
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import datetime
+from datetime import datetime, timedelta
 import yfinance as yf
+import time
 
 st.set_page_config(layout="wide")
 
@@ -148,7 +149,7 @@ def calculate_signals_for_ticker(ticker, start_date, end_date, params):
 
 def get_valid_date_range(interval):
     """선택된 캔들 주기에 따른 유효한 날짜 범위 반환"""
-    today = datetime.now()
+    today = datetime(2025, 2, 19, 13, 20, 37, 106915)
     
     intervals = {
         "1m": {"days": 7, "default": 7-1},
@@ -195,22 +196,27 @@ def main():
     min_start, default_start, today = get_valid_date_range(interval)
     
     # 날짜 선택 (캔들 주기에 따른 제한 적용)
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        start_date = st.date_input(
-            '시작일', 
-            value=default_start,
-            min_value=min_start,
-            max_value=today
-        )
-    with col2:
-        end_date = st.date_input(
-            '종료일',
-            value=today,
-            min_value=start_date,
-            max_value=today
-        )
-    
+    # col1, col2 = st.sidebar.columns(2)
+    # with col1:
+    #     start_date = st.date_input(
+    #         '시작일', 
+    #         value=default_start,
+    #         min_value=min_start,
+    #         max_value=today
+    #     )
+    # with col2:
+    #     end_date = st.date_input(
+    #         '종료일',
+    #         value=today,
+    #         min_value=start_date,
+    #         max_value=today
+    #     )
+    """
+    yfinance api 제한으로 인해 날짜 선택 불가능
+    """
+    start_date = default_start
+    end_date = today
+
     # 날짜 범위 경고
     max_days = (today - min_start).days
     selected_days = (end_date - start_date).days
@@ -225,18 +231,18 @@ def main():
     default_tickers = {
         # 기술주
         'AAPL': 'Apple Inc.',
-        'MSFT': 'Microsoft',
-        'GOOGL': 'Alphabet (Google)',
-        'AMZN': 'Amazon',
-        'META': 'Meta Platforms',
-        'NVDA': 'NVIDIA',
-        'TSLA': 'Tesla',
-        'INTC': 'Intel',
-        'AMD': 'Advanced Micro Devices',
-        'CRM': 'Salesforce',
-        'ADBE': 'Adobe',
-        'ORCL': 'Oracle',
-        'CSCO': 'Cisco',
+        # 'MSFT': 'Microsoft',
+        # 'GOOGL': 'Alphabet (Google)',
+        # 'AMZN': 'Amazon',
+        # 'META': 'Meta Platforms',
+        # 'NVDA': 'NVIDIA',
+        # 'TSLA': 'Tesla',
+        # 'INTC': 'Intel',
+        # 'AMD': 'Advanced Micro Devices',
+        # 'CRM': 'Salesforce',
+        # 'ADBE': 'Adobe',
+        # 'ORCL': 'Oracle',
+        # 'CSCO': 'Cisco',
         
         # # 금융
         # 'JPM': 'JPMorgan Chase',
@@ -347,6 +353,7 @@ def main():
             count = calculate_signals_for_ticker(ticker, start_date, end_date, current_params)
             st.session_state.signal_counts[ticker] = count
             progress_bar.progress((i + 1) / len(default_tickers))
+            time.sleep(1)
         
         status_text.empty()
         progress_bar.empty()
@@ -399,12 +406,25 @@ def main():
         st.session_state.current_interval != interval):
         try:
             with st.spinner('데이터를 불러오는 중...'):
-                stock = yf.Ticker(ticker)
-                st.session_state.ohlcv_data = stock.history(
-                    start=start_date,
-                    end=end_date,
-                    interval=interval
-                )
+                # 로컬 데이터 경로 설정
+                data_path = f'data/{ticker}_{interval}_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.csv'
+                
+                try:
+                    # 로컬에서 데이터 불러오기 시도
+                    st.session_state.ohlcv_data = pd.read_csv(data_path, index_col=0, parse_dates=True)
+                    st.info(f'로컬 데이터를 불러왔습니다: {data_path}')
+                except FileNotFoundError:
+                    # 로컬 데이터가 없는 경우 yfinance에서 데이터 가져오기
+                    st.warning('로컬 데이터가 없어 yfinance에서 데이터를 가져와야합니다.')
+                    
+
+                # stock = yf.Ticker(ticker)
+                # st.session_state.ohlcv_data = stock.history(
+                #     start=start_date,
+                #     end=end_date,
+                #     interval=interval
+                # )
+                # time.sleep(1)
                 if len(st.session_state.ohlcv_data) == 0:
                     st.error(f'데이터가 없습니다: {ticker}')
                     return
