@@ -212,7 +212,7 @@ def main():
     #         max_value=today
     #     )
     """
-    yfinance api 제한으로 인해 날짜 선택 불가능
+    yfinance api 제한으로 인해 날짜 선택 불가능 (추후 수정 예정)
     """
     start_date = default_start
     end_date = today
@@ -412,7 +412,7 @@ def main():
                 try:
                     # 로컬에서 데이터 불러오기 시도
                     st.session_state.ohlcv_data = pd.read_csv(data_path, index_col=0, parse_dates=True)
-                    st.info(f'로컬 데이터를 불러왔습니다: {data_path}')
+                    #st.info(f'로컬 데이터를 불러왔습니다: {data_path}')
                 except FileNotFoundError:
                     # 로컬 데이터가 없는 경우 yfinance에서 데이터 가져오기
                     st.warning('로컬 데이터가 없어 yfinance에서 데이터를 가져와야합니다.')
