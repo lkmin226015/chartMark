@@ -231,80 +231,80 @@ def main():
     default_tickers = {
         # 기술주
         'AAPL': 'Apple Inc.',
-        # 'MSFT': 'Microsoft',
-        # 'GOOGL': 'Alphabet (Google)',
-        # 'AMZN': 'Amazon',
-        # 'META': 'Meta Platforms',
-        # 'NVDA': 'NVIDIA',
-        # 'TSLA': 'Tesla',
-        # 'INTC': 'Intel',
-        # 'AMD': 'Advanced Micro Devices',
-        # 'CRM': 'Salesforce',
-        # 'ADBE': 'Adobe',
-        # 'ORCL': 'Oracle',
-        # 'CSCO': 'Cisco',
+        'MSFT': 'Microsoft',
+        'GOOGL': 'Alphabet (Google)',
+        'AMZN': 'Amazon',
+        'META': 'Meta Platforms',
+        'NVDA': 'NVIDIA',
+        'TSLA': 'Tesla',
+        'INTC': 'Intel',
+        'AMD': 'Advanced Micro Devices',
+        'CRM': 'Salesforce',
+        'ADBE': 'Adobe',
+        'ORCL': 'Oracle',
+        'CSCO': 'Cisco',
         
-        # # 금융
-        # 'JPM': 'JPMorgan Chase',
-        # 'BAC': 'Bank of America',
-        # 'WFC': 'Wells Fargo',
-        # 'GS': 'Goldman Sachs',
-        # 'V': 'Visa',
-        # 'MA': 'Mastercard',
+        # 금융
+        'JPM': 'JPMorgan Chase',
+        'BAC': 'Bank of America',
+        'WFC': 'Wells Fargo',
+        'GS': 'Goldman Sachs',
+        'V': 'Visa',
+        'MA': 'Mastercard',
         
-        # # 소비재
-        # 'KO': 'Coca-Cola',
-        # 'PEP': 'PepsiCo',
-        # 'MCD': "McDonald's",
-        # 'SBUX': 'Starbucks',
-        # 'NKE': 'Nike',
-        # 'DIS': 'Disney',
-        # 'NFLX': 'Netflix',
-        # 'WMT': 'Walmart',
-        # 'COST': 'Costco',
-        # 'TGT': 'Target',
+        # 소비재
+        'KO': 'Coca-Cola',
+        'PEP': 'PepsiCo',
+        'MCD': "McDonald's",
+        'SBUX': 'Starbucks',
+        'NKE': 'Nike',
+        'DIS': 'Disney',
+        'NFLX': 'Netflix',
+        'WMT': 'Walmart',
+        'COST': 'Costco',
+        'TGT': 'Target',
         
-        # # 헬스케어
-        # 'JNJ': 'Johnson & Johnson',
-        # 'PFE': 'Pfizer',
-        # 'MRNA': 'Moderna',
-        # 'UNH': 'UnitedHealth',
-        # 'ABT': 'Abbott Laboratories',
+        # 헬스케어
+        'JNJ': 'Johnson & Johnson',
+        'PFE': 'Pfizer',
+        'MRNA': 'Moderna',
+        'UNH': 'UnitedHealth',
+        'ABT': 'Abbott Laboratories',
         
-        # # 통신
-        # 'T': 'AT&T',
-        # 'VZ': 'Verizon',
+        # 통신
+        'T': 'AT&T',
+        'VZ': 'Verizon',
         
-        # # 에너지
-        # 'XOM': 'ExxonMobil',
-        # 'CVX': 'Chevron',
+        # 에너지
+        'XOM': 'ExxonMobil',
+        'CVX': 'Chevron',
         
-        # # 산업재
-        # 'BA': 'Boeing',
-        # 'CAT': 'Caterpillar',
-        # 'GE': 'General Electric',
-        # 'MMM': '3M',
+        # 산업재
+        'BA': 'Boeing',
+        'CAT': 'Caterpillar',
+        'GE': 'General Electric',
+        'MMM': '3M',
         
-        # # 자동차
-        # 'F': 'Ford',
-        # 'GM': 'General Motors',
+        # 자동차
+        'F': 'Ford',
+        'GM': 'General Motors',
         
-        # # 반도체
-        # 'TSM': 'Taiwan Semiconductor',
-        # 'QCOM': 'Qualcomm',
-        # 'TXN': 'Texas Instruments',
+        # 반도체
+        'TSM': 'Taiwan Semiconductor',
+        'QCOM': 'Qualcomm',
+        'TXN': 'Texas Instruments',
         
-        # # 엔터테인먼트/게임
-        # 'EA': 'Electronic Arts',
-        # 'TTWO': 'Take-Two Interactive',
+        # 엔터테인먼트/게임
+        'EA': 'Electronic Arts',
+        'TTWO': 'Take-Two Interactive',
         
-        # # 기타 테크
-        # 'ZM': 'Zoom',
-        # 'UBER': 'Uber',
-        # 'ABNB': 'Airbnb',
-        # 'SQ': 'Block (Square)',
-        # 'PYPL': 'PayPal',
-        # 'SHOP': 'Shopify'
+        # 기타 테크
+        'ZM': 'Zoom',
+        'UBER': 'Uber',
+        'ABNB': 'Airbnb',
+        'SQ': 'Block (Square)',
+        'PYPL': 'PayPal',
+        'SHOP': 'Shopify'
     }
     
     # 설명 추가
@@ -461,7 +461,18 @@ def main():
             # 시그널 날짜 표시
             if total_signals > 0:
                 st.subheader('시그널 발생 날짜')
-                signal_dates = ohlcv[signals].index.strftime('%Y-%m-%d').tolist()
+                signal_dates = []
+                for idx in ohlcv[signals].index:
+                    try:
+                        # datetime 객체로 변환 시도
+                        if isinstance(idx, str):
+                            date_str = pd.to_datetime(idx).strftime('%Y-%m-%d')
+                        else:
+                            date_str = idx.strftime('%Y-%m-%d')
+                        signal_dates.append(date_str)
+                    except:
+                        # 변환 실패시 문자열 그대로 사용
+                        signal_dates.append(str(idx))
                 st.write(signal_dates)
                 
         except Exception as e:
