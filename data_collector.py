@@ -68,84 +68,64 @@ def collect_stock_data(ticker, interval="1d"):
         return None
 
 def main():
-    # 기본 티커 목록
+    # 코스피 200 주요 종목 목록
     tickers = {
-        # 기술주
-        'AAPL': 'Apple Inc.',
-        'MSFT': 'Microsoft',
-        'GOOGL': 'Alphabet (Google)',
-        'AMZN': 'Amazon',
-        'META': 'Meta Platforms',
-        'NVDA': 'NVIDIA',
-        'TSLA': 'Tesla',
-        'INTC': 'Intel',
-        'AMD': 'Advanced Micro Devices',
-        'CRM': 'Salesforce',
-        'ADBE': 'Adobe',
-        'ORCL': 'Oracle',
-        'CSCO': 'Cisco',
+        # 반도체/전자
+        '005930.KS': '삼성전자',
+        '000660.KS': 'SK하이닉스',
+        '066570.KS': 'LG전자',
+        '009150.KS': '삼성전기',
+        
+        # 자동차/배터리
+        '005380.KS': '현대차',
+        '000270.KS': '기아',
+        '012330.KS': '현대모비스',
+        '373220.KS': 'LG에너지솔루션',
+        '006400.KS': '삼성SDI',
+        
+        # 화학/에너지
+        '051910.KS': 'LG화학',
+        '096770.KS': 'SK이노베이션',
+        '034730.KS': 'SK',
+        '010950.KS': 'S-Oil',
+        
+        # 바이오/제약
+        '207940.KS': '삼성바이오로직스',
+        '068270.KS': '셀트리온',
+        '326030.KS': 'SK바이오팜',
         
         # 금융
-        'JPM': 'JPMorgan Chase',
-        'BAC': 'Bank of America',
-        'WFC': 'Wells Fargo',
-        'GS': 'Goldman Sachs',
-        'V': 'Visa',
-        'MA': 'Mastercard',
+        '055550.KS': '신한지주',
+        '086790.KS': '하나금융지주',
+        '316140.KS': '우리금융지주',
+        '024110.KS': '기업은행',
         
-        # 소비재
-        'KO': 'Coca-Cola',
-        'PEP': 'PepsiCo',
-        'MCD': "McDonald's",
-        'SBUX': 'Starbucks',
-        'NKE': 'Nike',
-        'DIS': 'Disney',
-        'NFLX': 'Netflix',
-        'WMT': 'Walmart',
-        'COST': 'Costco',
-        'TGT': 'Target',
+        # 통신/인터넷
+        '017670.KS': 'SK텔레콤',
+        '030200.KS': 'KT',
+        '035420.KS': 'NAVER',
+        '035720.KS': '카카오',
         
-        # 헬스케어
-        'JNJ': 'Johnson & Johnson',
-        'PFE': 'Pfizer',
-        'MRNA': 'Moderna',
-        'UNH': 'UnitedHealth',
-        'ABT': 'Abbott Laboratories',
+        # 철강/소재
+        '005490.KS': 'POSCO홀딩스',
+        '010130.KS': '고려아연',
+        '004020.KS': '현대제철',
         
-        # 통신
-        'T': 'AT&T',
-        'VZ': 'Verizon',
+        # 유통/소비재
+        '005930.KS': '삼성전자',
+        '139480.KS': '이마트',
+        '004170.KS': '신세계',
+        '097950.KS': 'CJ제일제당',
         
-        # 에너지
-        'XOM': 'ExxonMobil',
-        'CVX': 'Chevron',
+        # 건설
+        '000720.KS': '현대건설',
+        '028260.KS': '삼성물산',
+        '047040.KS': '대우건설',
         
-        # 산업재
-        'BA': 'Boeing',
-        'CAT': 'Caterpillar',
-        'GE': 'General Electric',
-        'MMM': '3M',
-        
-        # 자동차
-        'F': 'Ford',
-        'GM': 'General Motors',
-        
-        # 반도체
-        'TSM': 'Taiwan Semiconductor',
-        'QCOM': 'Qualcomm',
-        'TXN': 'Texas Instruments',
-        
-        # 엔터테인먼트/게임
-        'EA': 'Electronic Arts',
-        'TTWO': 'Take-Two Interactive',
-        
-        # 기타 테크
-        'ZM': 'Zoom',
-        'UBER': 'Uber',
-        'ABNB': 'Airbnb',
-        'SQ': 'Block (Square)',
-        'PYPL': 'PayPal',
-        'SHOP': 'Shopify'
+        # 항공/운송
+        '003490.KS': '대한항공',
+        '011200.KS': 'HMM',
+        '180640.KS': '한진칼'
     }
     
     # 모든 간격 설정

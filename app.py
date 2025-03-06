@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import yfinance as yf
 import time
+from streamlit_plotly_events import plotly_events
 
 st.set_page_config(layout="wide")
 
@@ -27,97 +28,149 @@ if 'current_interval' not in st.session_state:
 if 'last_interval' not in st.session_state:
     st.session_state.last_interval = None
 
-def plot_analysis_streamlit(ohlcv, signals, ema_period, ma_long_period, ma_mid_periods):
-    # 인터랙티브 차트 생성
-    fig = make_subplots(rows=2, cols=1, 
-                        shared_xaxes=True,
-                        vertical_spacing=0.03,
-                        row_heights=[0.7, 0.3])
+def plot_analysis_streamlit(df, signals):
+    # 인터랙티브 차트 생성 (4개의 subplot)
+    fig = make_subplots(
+        rows=4, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+        row_heights=[0.4, 0.2, 0.2, 0.2],
+        specs=[[{"secondary_y": True}],
+               [{"secondary_y": False}],
+               [{"secondary_y": False}],
+               [{"secondary_y": False}]]
+    )
 
     # 캔들스틱 차트 추가
     fig.add_trace(
         go.Candlestick(
-            x=ohlcv.index,
-            open=ohlcv['open'],
-            high=ohlcv['high'],
-            low=ohlcv['low'],
-            close=ohlcv['close'],
+            x=df.index,
+            open=df['open'],
+            high=df['high'],
+            low=df['low'],
+            close=df['close'],
             name=st.session_state.current_ticker
         ),
         row=1, col=1
     )
 
-    # 이동평균선 추가
-    colors = {
-        f'EMA{ema_period}': 'blue',
-        f'MA{ma_long_period}': 'red',
-        f'MA{ma_mid_periods[0]}': 'green',
-        f'MA{ma_mid_periods[1]}': 'orange',
-        f'MA{ma_mid_periods[2]}': 'purple'
-    }
+    # 거래량 바 추가
+    colors = ['red' if row['close'] < row['open'] else 'green' 
+             for i, row in df.iterrows()]
     
-    for ma_name, color in colors.items():
-        line_width = 3 if ma_name == f'EMA{ema_period}' or ma_name == f'MA{ma_long_period}' else 1
+    fig.add_trace(
+        go.Bar(
+            x=df.index,
+            y=df['volume'],
+            name='Volume',
+            marker_color=colors,
+            opacity=0.3
+        ),
+        row=1, col=1,
+        secondary_y=True
+    )
 
-        fig.add_trace(
-            go.Scatter(
-                x=ohlcv.index,
-                y=ohlcv[ma_name],
-                name=ma_name,
-                line=dict(color=color, width=line_width),
-                opacity=0.7
-            ),
-            row=1, col=1
-        )
-
-    # 시그널 포인트 추가
-    signal_points = ohlcv[signals]['close']
+    # 매수 시그널 표시
+    signal_points = df[signals]['close']
     fig.add_trace(
         go.Scatter(
             x=signal_points.index,
-            y=signal_points+10,
+            y=signal_points,
             mode='markers',
-            name='Signal',
+            name='Buy Signal',
             marker=dict(
-                symbol='triangle-down',
-                size=10,
+                symbol='triangle-up',
+                size=12,
                 color='red'
             )
         ),
         row=1, col=1
     )
 
-    # 거래량 차트 추가
-    colors = ['red' if row['close'] < row['open'] else 'green' 
-             for i, row in ohlcv.iterrows()]
-    
+    # MACD 차트
     fig.add_trace(
-        go.Bar(
-            x=ohlcv.index,
-            y=ohlcv['volume'],
-            name='Volume',
-            marker_color=colors,
-            opacity=0.5
+        go.Scatter(
+            x=df.index,
+            y=df['macd'],
+            name='MACD',
+            line=dict(color='blue')
         ),
         row=2, col=1
     )
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df['macd_signal'],
+            name='MACD Signal',
+            line=dict(color='orange')
+        ),
+        row=2, col=1
+    )
+
+    # CCI 차트
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df['cci'],
+            name='CCI',
+            line=dict(color='purple')
+        ),
+        row=3, col=1
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df['cci_signal'],
+            name='CCI Signal',
+            line=dict(color='pink')
+        ),
+        row=3, col=1
+    )
+
+    # RSI 차트
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df['rsi'],
+            name='RSI',
+            line=dict(color='green')
+        ),
+        row=4, col=1
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df['rsi_signal'],
+            name='RSI Signal',
+            line=dict(color='lightgreen')
+        ),
+        row=4, col=1
+    )
+
     # 차트 레이아웃 설정
     fig.update_layout(
         title='Trading Strategy Analysis',
-        yaxis_title='Price',
-        yaxis2_title='Volume',
         xaxis_rangeslider_visible=False,
-        height=800,
+        height=900,
         showlegend=True,
         legend=dict(
             yanchor="top",
             y=0.99,
             xanchor="left",
-            x=0.01
-        )
+            x=0.01,
+            bgcolor='rgba(255, 255, 255, 0.8)'
+        ),
+        hovermode='x unified'
     )
 
-    # 차트 스타일 설정
+    # Y축 제목 설정
+    fig.update_yaxes(title_text="Price", row=1, col=1)
+    fig.update_yaxes(title_text="Volume", row=1, col=1, secondary_y=True)
+    fig.update_yaxes(title_text="MACD", row=2, col=1)
+    fig.update_yaxes(title_text="CCI", row=3, col=1)
+    fig.update_yaxes(title_text="RSI", row=4, col=1)
+
+    # 그리드 설정
     fig.update_xaxes(gridcolor='lightgrey', gridwidth=0.5)
     fig.update_yaxes(gridcolor='lightgrey', gridwidth=0.5)
     
@@ -227,84 +280,63 @@ def main():
     # 사이드바에 파라미터 설정
     st.sidebar.header('분석 파라미터')
     
-    # 티커 선택
+    # 코스피 200 주요 종목 목록
     default_tickers = {
-        # 기술주
-        'AAPL': 'Apple Inc.',
-        'MSFT': 'Microsoft',
-        'GOOGL': 'Alphabet (Google)',
-        'AMZN': 'Amazon',
-        'META': 'Meta Platforms',
-        'NVDA': 'NVIDIA',
-        'TSLA': 'Tesla',
-        'INTC': 'Intel',
-        'AMD': 'Advanced Micro Devices',
-        'CRM': 'Salesforce',
-        'ADBE': 'Adobe',
-        'ORCL': 'Oracle',
-        'CSCO': 'Cisco',
+        # 반도체/전자
+        '005930.KS': '삼성전자',
+        '000660.KS': 'SK하이닉스',
+        '066570.KS': 'LG전자',
+        '009150.KS': '삼성전기',
         
-        # # 금융
-        # 'JPM': 'JPMorgan Chase',
-        # 'BAC': 'Bank of America',
-        # 'WFC': 'Wells Fargo',
-        # 'GS': 'Goldman Sachs',
-        # 'V': 'Visa',
-        # 'MA': 'Mastercard',
+        # 자동차/배터리
+        '005380.KS': '현대차',
+        '000270.KS': '기아',
+        '012330.KS': '현대모비스',
+        '373220.KS': 'LG에너지솔루션',
+        '006400.KS': '삼성SDI',
         
-        # # 소비재
-        # 'KO': 'Coca-Cola',
-        # 'PEP': 'PepsiCo',
-        # 'MCD': "McDonald's",
-        # 'SBUX': 'Starbucks',
-        # 'NKE': 'Nike',
-        # 'DIS': 'Disney',
-        # 'NFLX': 'Netflix',
-        # 'WMT': 'Walmart',
-        # 'COST': 'Costco',
-        # 'TGT': 'Target',
+        # 화학/에너지
+        '051910.KS': 'LG화학',
+        '096770.KS': 'SK이노베이션',
+        '034730.KS': 'SK',
+        '010950.KS': 'S-Oil',
         
-        # # 헬스케어
-        # 'JNJ': 'Johnson & Johnson',
-        # 'PFE': 'Pfizer',
-        # 'MRNA': 'Moderna',
-        # 'UNH': 'UnitedHealth',
-        # 'ABT': 'Abbott Laboratories',
+        # 바이오/제약
+        '207940.KS': '삼성바이오로직스',
+        '068270.KS': '셀트리온',
+        '326030.KS': 'SK바이오팜',
         
-        # # 통신
-        # 'T': 'AT&T',
-        # 'VZ': 'Verizon',
+        # 금융
+        '055550.KS': '신한지주',
+        '086790.KS': '하나금융지주',
+        '316140.KS': '우리금융지주',
+        '024110.KS': '기업은행',
         
-        # # 에너지
-        # 'XOM': 'ExxonMobil',
-        # 'CVX': 'Chevron',
+        # 통신/인터넷
+        '017670.KS': 'SK텔레콤',
+        '030200.KS': 'KT',
+        '035420.KS': 'NAVER',
+        '035720.KS': '카카오',
         
-        # # 산업재
-        # 'BA': 'Boeing',
-        # 'CAT': 'Caterpillar',
-        # 'GE': 'General Electric',
-        # 'MMM': '3M',
+        # 철강/소재
+        '005490.KS': 'POSCO홀딩스',
+        '010130.KS': '고려아연',
+        '004020.KS': '현대제철',
         
-        # # 자동차
-        # 'F': 'Ford',
-        # 'GM': 'General Motors',
+        # 유통/소비재
+        '139480.KS': '이마트',
+        '004170.KS': '신세계',
+        '097950.KS': 'CJ제일제당',
         
-        # # 반도체
-        # 'TSM': 'Taiwan Semiconductor',
-        # 'QCOM': 'Qualcomm',
-        # 'TXN': 'Texas Instruments',
+        # 건설
+        '000720.KS': '현대건설',
+        '028260.KS': '삼성물산',
+        '047040.KS': '대우건설',
         
-        # # 엔터테인먼트/게임
-        # 'EA': 'Electronic Arts',
-        # 'TTWO': 'Take-Two Interactive',
-        
-        # # 기타 테크
-        # 'ZM': 'Zoom',
-        # 'UBER': 'Uber',
-        # 'ABNB': 'Airbnb',
-        # 'SQ': 'Block (Square)',
-        # 'PYPL': 'PayPal',
-        # 'SHOP': 'Shopify'
+        # 항공/운송
+        '003490.KS': '대한항공',
+        '011200.KS': 'HMM',
+        '180640.KS': '한진칼'
     }
     
     # 설명 추가
@@ -313,141 +345,32 @@ def main():
     st.sidebar.markdown("2) 중기 MA들이 모두 양의 기울기")
     st.sidebar.markdown("3) 눌림목 찾기(눌림목 확인 기간, 눌림목 허용 범위)")
     # 전략 파라미터 설정
-    st.sidebar.subheader('이동평균선 파라미터')
-    ema_period = st.sidebar.slider('EMA 기간', 50, 200, 120, 1)
-    ma_long_period = st.sidebar.slider('장기 MA 기간', 50, 200, 111, 1)
+    st.sidebar.subheader('MACD 파라미터')
+    macd_fast = st.sidebar.slider('MACD Fast Period', 5, 30, 12)
+    macd_slow = st.sidebar.slider('MACD Slow Period', 15, 50, 26)
+    macd_signal = st.sidebar.slider('MACD Signal Period', 5, 20, 9)
 
+    st.sidebar.subheader('CCI 파라미터')
+    cci_period = st.sidebar.slider('CCI Period', 5, 30, 14)
+    cci_signal = st.sidebar.slider('CCI Signal Period', 5, 20, 9)
 
-    # 중기 이동평균선 기간 설정
-    st.sidebar.subheader('중기 이동평균선 기간')
-    ma_period1 = st.sidebar.slider('첫 번째 MA 기간', 20, 100, 25, 1)
-    ma_period2 = st.sidebar.slider('두 번째 MA 기간', 20, 100, 33, 1)
-    ma_period3 = st.sidebar.slider('세 번째 MA 기간', 20, 100, 49, 1)
-    ma_mid_periods = (ma_period1, ma_period2, ma_period3)
-    
-    st.sidebar.subheader('전략 파라미터')
-    tolerance = st.sidebar.slider('평행 허용 오차', 0.0000, 5e-5, 1e-6, 1e-6, format='%.6f')
-    compression_period = st.sidebar.slider('눌림목 확인 기간', 5, 50, 20)
-    compression_threshold = st.sidebar.slider('눌림목 허용 범위', 0.01, 0.20, 0.05, format='%.2f')
-    
-    ### calculation of signal counts for all tickers
-    # 현재 파라미터 저장
-    current_params = {
-        'tolerance': tolerance,
-        'compression_period': compression_period,
-        'compression_threshold': compression_threshold,
-        'ema_period': ema_period,
-        'ma_long_period': ma_long_period,
-        'ma_mid_periods': ma_mid_periods
-    }
-    
-    # 캔들 주기가 변경되었거나 파라미터가 변경되었을 때 시그널 재계산
-    if st.session_state.last_interval != interval or \
-       st.session_state.last_params != current_params or \
-       not st.session_state.signal_counts:
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        for i, ticker in enumerate(default_tickers.keys()):
-            status_text.text(f'분석 중... {ticker}')
-            count = calculate_signals_for_ticker(ticker, start_date, end_date, current_params)
-            st.session_state.signal_counts[ticker] = count
-            progress_bar.progress((i + 1) / len(default_tickers))
-        
-        status_text.empty()
-        progress_bar.empty()
-        st.session_state.last_params = current_params
-        st.session_state.last_interval = interval  # 현재 interval 저장
-    
-    # 시그널 수에 따라 티커 정렬
-    sorted_tickers = sorted(
-        default_tickers.keys(),
-        key=lambda x: st.session_state.signal_counts.get(x, 0),
-        reverse=True
-    )
-    
+    st.sidebar.subheader('RSI 파라미터')
+    rsi_period = st.sidebar.slider('RSI Period', 5, 30, 14)
+    rsi_signal = st.sidebar.slider('RSI Signal Period', 5, 20, 9)
 
-
-    # 섹터별로 정렬된 리스트 생성
-    st.sidebar.subheader('종목 선택')
-    sorted_tickers = sorted(default_tickers.keys())
-
-    selected_ticker = st.sidebar.selectbox(
-        '분석할 종목 선택',
-        options=sorted_tickers,
-        format_func=lambda x: f'{x} - {default_tickers[x]} ({st.session_state.signal_counts.get(x, 0)}개 시그널)'
-    )
-    
-    # 시그널 수가 있는 종목만 보기 옵션
-    show_only_signals = st.sidebar.checkbox('시그널이 있는 종목만 보기')
-    if show_only_signals:
-        filtered_tickers = [t for t in sorted_tickers if st.session_state.signal_counts.get(t, 0) > 0]
-        if filtered_tickers:
-            selected_ticker = st.sidebar.selectbox(
-                '시그널이 있는 종목',
-                options=filtered_tickers,
-                format_func=lambda x: f'{x} - {default_tickers[x]} ({st.session_state.signal_counts.get(x, 0)}개 시그널)'
-            )
-        else:
-            st.sidebar.warning('현재 조건에서 시그널이 있는 종목이 없습니다.')
-
-
-    # 사용자 정의 티커 입력
-    custom_ticker = st.sidebar.text_input('다른 종목 티커 입력 (예: IBM)', '')
-    ticker = custom_ticker if custom_ticker else selected_ticker
-
-
-    # 세션 상태 체크를 티커 변경도 포함하도록 수정
-    if st.session_state.ohlcv_data is None or \
-       (st.session_state.start_date != start_date or \
-        st.session_state.end_date != end_date or \
-        st.session_state.current_ticker != ticker or \
-        st.session_state.current_interval != interval):
-        try:
-            with st.spinner('데이터를 불러오는 중...'):
-                # 로컬 데이터 경로 설정
-                data_path = f'data/{ticker}_{interval}_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.csv'
-                
-                try:
-                    # 로컬에서 데이터 불러오기 시도
-                    st.session_state.ohlcv_data = pd.read_csv(data_path, index_col=0, parse_dates=True)
-                    #st.info(f'로컬 데이터를 불러왔습니다: {data_path}')
-                except FileNotFoundError:
-                    # 로컬 데이터가 없는 경우 yfinance에서 데이터 가져오기
-                    st.warning('로컬 데이터가 없어 yfinance에서 데이터를 가져와야합니다.')
-                    
-
-                # stock = yf.Ticker(ticker)
-                # st.session_state.ohlcv_data = stock.history(
-                #     start=start_date,
-                #     end=end_date,
-                #     interval=interval
-                # )
-                # time.sleep(1)
-                if len(st.session_state.ohlcv_data) == 0:
-                    st.error(f'데이터가 없습니다: {ticker}')
-                    return
-                st.session_state.ohlcv_data.columns = st.session_state.ohlcv_data.columns.str.lower()
-                st.session_state.start_date = start_date
-                st.session_state.end_date = end_date
-                st.session_state.current_ticker = ticker
-                st.session_state.current_interval = interval
-        except Exception as e:
-            st.error(f'데이터 로딩 중 오류 발생: {str(e)}')
-            return
-    
-    # 데이터가 있으면 분석 실행
+    # 전략 분석 실행 부분 수정
     if st.session_state.ohlcv_data is not None:
         try:
             # 전략 분석
-            ohlcv, signals = analyze_strategy(
+            df, signals = analyze_strategy(
                 st.session_state.ohlcv_data.copy(),
-                tolerance=tolerance,
-                compression_period=compression_period,
-                compression_threshold=compression_threshold,
-                ema_period=ema_period,
-                ma_long_period=ma_long_period,
-                ma_mid_periods=ma_mid_periods
+                macd_fast=macd_fast,
+                macd_slow=macd_slow,
+                macd_signal=macd_signal,
+                cci_period=cci_period,
+                cci_signal=cci_signal,
+                rsi_period=rsi_period,
+                rsi_signal=rsi_signal
             )
             
             # 시그널 통계
@@ -455,13 +378,13 @@ def main():
             st.sidebar.metric("발견된 시그널 수", total_signals)
             
             # 차트 표시
-            plot_analysis_streamlit(ohlcv, signals, ema_period, ma_long_period, ma_mid_periods)
+            plot_analysis_streamlit(df, signals)
             
             # 시그널 날짜 표시
             if total_signals > 0:
                 st.subheader('시그널 발생 날짜')
                 signal_dates = []
-                for idx in ohlcv[signals].index:
+                for idx in df[signals].index:
                     try:
                         # datetime 객체로 변환 시도
                         if isinstance(idx, str):
