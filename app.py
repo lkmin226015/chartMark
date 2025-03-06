@@ -70,22 +70,40 @@ def plot_analysis_streamlit(df, signals):
         secondary_y=True
     )
 
-    # 매수 시그널 표시
+    # # 매수 시그널 표시 - marker
+    # signal_points = df[signals]['close']
+    # fig.add_trace(
+    #     go.Scatter(
+    #         x=signal_points.index,
+    #         y=signal_points,
+    #         mode='markers',
+    #         name='Buy Signal',
+    #         marker=dict(
+    #             symbol='triangle-up',
+    #             size=12,
+    #             color='red'
+    #         )
+    #     ),
+    #     row=1, col=1
+    # )
+
+    # 매수 시그널 각각을 빨간색 수직선으로 표시
     signal_points = df[signals]['close']
-    fig.add_trace(
-        go.Scatter(
-            x=signal_points.index,
-            y=signal_points,
-            mode='markers',
-            name='Buy Signal',
-            marker=dict(
-                symbol='triangle-up',
-                size=12,
-                color='red'
-            )
-        ),
-        row=1, col=1
-    )
+    for signal_index in signal_points.index:
+        fig.add_trace(
+            go.Scatter(
+                x=[signal_index, signal_index],
+                y=[df['low'].min(), df['high'].max()],
+                mode='lines',
+                name='Buy Signal',
+                line=dict(
+                    color='blue',
+                    width=1
+                ),
+                showlegend=False  # 범례에 중복 표시되지 않도록 설정
+            ),
+            row=1, col=1
+        )
 
     # MACD 차트
     fig.add_trace(
@@ -160,7 +178,8 @@ def plot_analysis_streamlit(df, signals):
             x=0.01,
             bgcolor='rgba(255, 255, 255, 0.8)'
         ),
-        hovermode='x unified'
+        hovermode='x unified',
+        hoversubplots='axis'
     )
 
     # Y축 제목 설정
@@ -189,12 +208,13 @@ def calculate_signals_for_ticker(ticker, start_date, end_date, params):
         # 전략 분석
         _, signals = analyze_strategy(
             data,
-            tolerance=params['tolerance'],
-            compression_period=params['compression_period'],
-            compression_threshold=params['compression_threshold'],
-            ema_period=params['ema_period'],
-            ma_long_period=params['ma_long_period'],
-            ma_mid_periods=params['ma_mid_periods']
+            macd_fast=params['macd_fast'],
+            macd_slow=params['macd_slow'],
+            macd_signal=params['macd_signal'],
+            cci_period=params['cci_period'],
+            cci_signal=params['cci_signal'],
+            rsi_period=params['rsi_period'],
+            rsi_signal=params['rsi_signal']
         )
         return int(signals.sum())
     except:
@@ -227,6 +247,86 @@ def get_valid_date_range(interval):
     min_start = today - pd.Timedelta(days=max_days)
     
     return min_start, default_start, today
+
+def analyze_signal_performance(df, signals, lookback_period, target_return, max_loss):
+    """
+    시그널 발생 후 수익률 분석
+    
+    Args:
+        df: DataFrame with OHLCV data
+        signals: Boolean series indicating buy signals
+        lookback_period: Number of candles to look forward
+        target_return: Target return percentage
+        max_loss: Maximum loss percentage to monitor
+        
+    Returns:
+        Dictionary containing performance metrics
+    """
+    signal_dates = df[signals].index
+    success_count = 0
+    loss_count = 0
+    max_returns = []
+    min_returns = []
+    days_to_target = []
+    days_to_loss = []
+    
+    for signal_date in signal_dates:
+        idx = df.index.get_loc(signal_date)
+        if idx + lookback_period >= len(df):
+            continue
+            
+        # 시그널 발생 시점부터 lookback_period 동안의 데이터
+        signal_price = df.iloc[idx]['close']
+        forward_prices_high = df.iloc[idx:idx + lookback_period + 1]['high']
+        forward_prices_low = df.iloc[idx:idx + lookback_period + 1]['low']
+        
+        # 최대 수익률과 최대 손실률 계산
+        max_return = ((forward_prices_high.max() - signal_price) / signal_price * 100)
+        min_return = ((forward_prices_low.min() - signal_price) / signal_price * 100)
+        max_returns.append(max_return)
+        min_returns.append(min_return)
+        
+        # 목표 수익률 도달 여부 확인
+        if max_return >= target_return:
+            success_count += 1
+            # 목표 도달까지 걸린 캔들 수 계산
+            target_idx = forward_prices_high[forward_prices_high >= signal_price * (1 + target_return/100)].index[0]
+            days = (target_idx - signal_date).days
+            days_to_target.append(days)
+        
+        # 최대 손실 도달 여부 확인
+        if min_return <= -max_loss:
+            loss_count += 1
+            # 손실 발생까지 걸린 캔들 수 계산
+            loss_idx = forward_prices_low[forward_prices_low <= signal_price * (1 - max_loss/100)].index[0]
+            days = (loss_idx - signal_date).days
+            days_to_loss.append(days)
+    
+    total_signals = len(signal_dates)
+    if total_signals == 0:
+        return {
+            'success_rate': 0,
+            'loss_rate': 0,
+            'avg_max_return': 0,
+            'avg_min_return': 0,
+            'avg_days_to_target': 0,
+            'avg_days_to_loss': 0,
+            'total_signals': 0,
+            'success_count': 0,
+            'loss_count': 0
+        }
+    
+    return {
+        'success_rate': (success_count / total_signals * 100) if total_signals > 0 else 0,
+        'loss_rate': (loss_count / total_signals * 100) if total_signals > 0 else 0,
+        'avg_max_return': sum(max_returns) / len(max_returns) if max_returns else 0,
+        'avg_min_return': sum(min_returns) / len(min_returns) if min_returns else 0,
+        'avg_days_to_target': sum(days_to_target) / len(days_to_target) if days_to_target else 0,
+        'avg_days_to_loss': sum(days_to_loss) / len(days_to_loss) if days_to_loss else 0,
+        'total_signals': total_signals,
+        'success_count': success_count,
+        'loss_count': loss_count
+    }
 
 def main():
     st.title('주식 전략 분석기')
@@ -340,10 +440,10 @@ def main():
     }
     
     # 설명 추가
-    st.sidebar.subheader("현재 전략 설명")
-    st.sidebar.markdown("1) EMA와 장기 MA가 평행한 구간 찾기(허용오차내)")
-    st.sidebar.markdown("2) 중기 MA들이 모두 양의 기울기")
-    st.sidebar.markdown("3) 눌림목 찾기(눌림목 확인 기간, 눌림목 허용 범위)")
+    st.sidebar.subheader("현재 전략 설명 - 아래 조건을 모두 만족하는 경우 시그널 발생")
+    st.sidebar.markdown("1) MACD가 Signal 이상으로 상승")
+    st.sidebar.markdown("2) CCI가 Signal 이상으로 상승")
+    st.sidebar.markdown("3) RSI가 Signal 이상으로 상승")
     # 전략 파라미터 설정
     st.sidebar.subheader('MACD 파라미터')
     macd_fast = st.sidebar.slider('MACD Fast Period', 5, 30, 12)
@@ -357,6 +457,117 @@ def main():
     st.sidebar.subheader('RSI 파라미터')
     rsi_period = st.sidebar.slider('RSI Period', 5, 30, 14)
     rsi_signal = st.sidebar.slider('RSI Signal Period', 5, 20, 9)
+
+    # 전략 파라미터 설정 섹션 아래에 수익률 분석 파라미터 추가
+    st.sidebar.subheader('수익률 분석 파라미터')
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        lookback_period = st.slider('분석 기간 (캔들 수)', 1, 100, 20)
+    with col2:
+        target_return = st.slider('목표 수익률 (%)', 1, 50, 5)
+        max_loss = st.slider('손절 수익률 (%)', 1, 50, 5)
+
+    ### calculation of signal counts for all tickers
+    # 현재 파라미터 저장
+    current_params = {
+        'macd_fast': macd_fast,
+        'macd_slow': macd_slow,
+        'macd_signal': macd_signal,
+        'cci_period': cci_period,
+        'cci_signal': cci_signal,
+        'rsi_period': rsi_period,
+        'rsi_signal': rsi_signal
+    }
+    
+    # 캔들 주기가 변경되었거나 파라미터가 변경되었을 때 시그널 재계산
+    if st.session_state.last_interval != interval or \
+       st.session_state.last_params != current_params or \
+       not st.session_state.signal_counts:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for i, ticker in enumerate(default_tickers.keys()):
+            status_text.text(f'분석 중... {ticker}')
+            count = calculate_signals_for_ticker(ticker, start_date, end_date, current_params)
+            st.session_state.signal_counts[ticker] = count
+            progress_bar.progress((i + 1) / len(default_tickers))
+        
+        status_text.empty()
+        progress_bar.empty()
+        st.session_state.last_params = current_params
+        st.session_state.last_interval = interval  # 현재 interval 저장
+    
+    # 시그널 수에 따라 티커 정렬
+    sorted_tickers = sorted(
+        default_tickers.keys(),
+        key=lambda x: st.session_state.signal_counts.get(x, 0),
+        reverse=True
+    )
+    
+
+    # 섹터별로 정렬된 리스트 생성
+    st.sidebar.subheader('종목 선택')
+    sorted_tickers = sorted(default_tickers.keys())
+
+    selected_ticker = st.sidebar.selectbox(
+        '분석할 종목 선택',
+        options=sorted_tickers,
+        format_func=lambda x: f'{x} - {default_tickers[x]} ({st.session_state.signal_counts.get(x, 0)}개 시그널)'
+    )
+    
+    # 시그널 수가 있는 종목만 보기 옵션
+    show_only_signals = st.sidebar.checkbox('시그널이 있는 종목만 보기')
+    if show_only_signals:
+        filtered_tickers = [t for t in sorted_tickers if st.session_state.signal_counts.get(t, 0) > 0]
+        if filtered_tickers:
+            selected_ticker = st.sidebar.selectbox(
+                '시그널이 있는 종목',
+                options=filtered_tickers,
+                format_func=lambda x: f'{x} - {default_tickers[x]} ({st.session_state.signal_counts.get(x, 0)}개 시그널)'
+            )
+        else:
+            st.sidebar.warning('현재 조건에서 시그널이 있는 종목이 없습니다.')
+
+    ticker = selected_ticker
+
+    # 세션 상태 체크를 티커 변경도 포함하도록 수정
+    if st.session_state.ohlcv_data is None or \
+       (st.session_state.start_date != start_date or \
+        st.session_state.end_date != end_date or \
+        st.session_state.current_ticker != ticker or \
+        st.session_state.current_interval != interval):
+        try:
+            with st.spinner('데이터를 불러오는 중...'):
+                # 로컬 데이터 경로 설정
+                data_path = f'data/{ticker}_{interval}_{start_date.strftime("%Y%m%d")}_{end_date.strftime("%Y%m%d")}.csv'
+                
+                try:
+                    # 로컬에서 데이터 불러오기 시도
+                    st.session_state.ohlcv_data = pd.read_csv(data_path, index_col=0, parse_dates=True)
+                    #st.info(f'로컬 데이터를 불러왔습니다: {data_path}')
+                except FileNotFoundError:
+                    # 로컬 데이터가 없는 경우 yfinance에서 데이터 가져오기
+                    st.warning('로컬 데이터가 없어 yfinance에서 데이터를 가져와야합니다.')
+                    
+
+                # stock = yf.Ticker(ticker)
+                # st.session_state.ohlcv_data = stock.history(
+                #     start=start_date,
+                #     end=end_date,
+                #     interval=interval
+                # )
+                # time.sleep(1)
+                if len(st.session_state.ohlcv_data) == 0:
+                    st.error(f'데이터가 없습니다: {ticker}')
+                    return
+                st.session_state.ohlcv_data.columns = st.session_state.ohlcv_data.columns.str.lower()
+                st.session_state.start_date = start_date
+                st.session_state.end_date = end_date
+                st.session_state.current_ticker = ticker
+                st.session_state.current_interval = interval
+        except Exception as e:
+            st.error(f'데이터 로딩 중 오류 발생: {str(e)}')
+            return
 
     # 전략 분석 실행 부분 수정
     if st.session_state.ohlcv_data is not None:
@@ -376,9 +587,46 @@ def main():
             # 시그널 통계
             total_signals = signals.sum()
             st.sidebar.metric("발견된 시그널 수", total_signals)
-            
+
             # 차트 표시
             plot_analysis_streamlit(df, signals)
+            
+            # 수익률 분석 결과 표시
+            if total_signals > 0:
+                st.subheader('시그널 성과 분석')
+                performance = analyze_signal_performance(df, signals, lookback_period, target_return, max_loss)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("##### 수익 분석")
+                    st.metric(
+                        f"{lookback_period}캔들 내 {target_return}% 달성 확률",
+                        f"{performance['success_rate']:.1f}%"
+                    )
+                    st.metric(
+                        "평균 최대 수익률",
+                        f"{performance['avg_max_return']:.1f}%"
+                    )
+                    if performance['success_count'] > 0:
+                        st.metric(
+                            "목표 수익률 달성까지 평균 소요 기간",
+                            f"{performance['avg_days_to_target']:.1f}일"
+                        )
+                with col2:
+                    st.markdown("##### 손실 분석")
+                    st.metric(
+                        f"{lookback_period}캔들 내 {max_loss}% 손실 확률",
+                        f"{performance['loss_rate']:.1f}%"
+                    )
+                    st.metric(
+                        "평균 최대 손실률",
+                        f"{performance['avg_min_return']:.1f}%"
+                    )
+                    if performance['loss_count'] > 0:
+                        st.metric(
+                            "손절 수익률 도달까지 평균 소요 기간",
+                            f"{performance['avg_days_to_loss']:.1f}일"
+                        )
             
             # 시그널 날짜 표시
             if total_signals > 0:
