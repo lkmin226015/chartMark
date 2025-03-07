@@ -226,15 +226,15 @@ def get_valid_date_range(interval):
     
     intervals = {
         "1m": {"days": 7, "default": 7-1},
-        "2m": {"days": 60, "default": 60-1},
-        "5m": {"days": 60, "default": 60-1},
-        "15m": {"days": 60, "default": 60-1},
-        "30m": {"days": 60, "default": 60-1},
+        # "2m": {"days": 60, "default": 60-1},
+        # "5m": {"days": 60, "default": 60-1},
+        # "15m": {"days": 60, "default": 60-1},
+        # "30m": {"days": 60, "default": 60-1},
         "60m": {"days": 60, "default": 60-1},
-        "90m": {"days": 60, "default": 60-1},
-        "1h": {"days": 730, "default": 730-1},
+        # "90m": {"days": 60, "default": 60-1},
+        # "1h": {"days": 730, "default": 730-1},
         "1d": {"days": 10000, "default": 365*5},
-        "5d": {"days": 10000, "default": 365*5},
+        # "5d": {"days": 10000, "default": 365*5},
         "1wk": {"days": 10000, "default": 365*5},
         "1mo": {"days": 10000, "default": 365*5},
         "3mo": {"days": 10000, "default": 365*5}
@@ -259,6 +259,7 @@ def analyze_signal_performance(df, signals, lookback_period, target_return, max_
     min_returns = []
     days_to_target = []
     days_to_loss = []
+    actual_returns = []  # 실제 수익률 저장 리스트 추가
     
     for signal_date in signal_dates:
         idx = df.index.get_loc(signal_date)
@@ -281,21 +282,23 @@ def analyze_signal_performance(df, signals, lookback_period, target_return, max_
                 days = (i - signal_date).days
                 days_to_target.append(days)
                 max_returns.append(high_return)
+                actual_returns.append(target_return)  # 목표 수익률로 익절
                 break
             elif low_return <= -max_loss:
                 loss_count += 1
                 days = (i - signal_date).days
                 days_to_loss.append(days)
                 min_returns.append(low_return)
+                actual_returns.append(-max_loss)  # 손절 수익률로 손절
                 break
             
             # 마지막 캔들까지 목표 수익률이나 손절 수익률에 도달하지 못한 경우
             if i == forward_slice.index[-1]:
-                # 최종 수익률 기록
-                max_return = ((forward_slice['high'].max() - signal_price) / signal_price * 100)
-                min_return = ((forward_slice['low'].min() - signal_price) / signal_price * 100)
-                max_returns.append(max_return)
-                min_returns.append(min_return)
+                # 마지막 종가 기준 수익률 계산
+                final_return = ((row['close'] - signal_price) / signal_price * 100)
+                max_returns.append(final_return)
+                min_returns.append(final_return)
+                actual_returns.append(final_return)  # 마지막 종가 기준 수익률
     
     total_signals = len(signal_dates)
     if total_signals == 0:
@@ -309,7 +312,8 @@ def analyze_signal_performance(df, signals, lookback_period, target_return, max_
             'total_signals': 0,
             'success_count': 0,
             'loss_count': 0,
-            'timeout_count': 0
+            'timeout_count': 0,
+            'total_return': 0  # 전체 평균 수익률 추가
         }
     
     timeout_count = total_signals - success_count - loss_count
@@ -325,7 +329,8 @@ def analyze_signal_performance(df, signals, lookback_period, target_return, max_
         'total_signals': total_signals,
         'success_count': success_count,
         'loss_count': loss_count,
-        'timeout_count': timeout_count
+        'timeout_count': timeout_count,
+        'total_return': sum(actual_returns) / len(actual_returns) if actual_returns else 0  # 전체 평균 수익률
     }
 
 def main():
@@ -334,14 +339,18 @@ def main():
     # 캔들 주기 선택
     st.sidebar.subheader('캔들 주기 설정')
     interval_options = {
-        "1분": "1m", "2분": "2m", "5분": "5m", "15분": "15m", "30분": "30m",
-        "60분": "60m", "90분": "90m", "1시간": "1h", 
-        "1일": "1d", "5일": "5d", "1주": "1wk", "1달": "1mo", "3달": "3mo"
+        "1분": "1m",
+        # "2분": "2m", "5분": "5m", "15분": "15m", "30분": "30m",
+        "60분": "60m",
+        # "90분": "90m", "1시간": "1h", 
+        "1일": "1d",
+        #"5일": "5d",
+        "1주": "1wk", "1달": "1mo", "3달": "3mo"
     }
     selected_interval_name = st.sidebar.selectbox(
         '캔들 주기',
         options=list(interval_options.keys()),
-        index=8  # 기본값 1일
+        index=2  # 기본값 1일
     )
     interval = interval_options[selected_interval_name]
     
@@ -596,6 +605,13 @@ def main():
                 st.subheader('시그널 성과 분석')
                 performance = analyze_signal_performance(df, signals, lookback_period, target_return, max_loss)
                 
+                # 전체 수익률을 먼저 표시
+                st.metric(
+                    "전체 평균 수익률",
+                    f"{performance['total_return']:.1f}%",
+                    help="목표 수익률 달성, 손절, 미달성 건을 모두 포함한 평균 수익률"
+                )
+                
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.markdown("##### 수익 분석")
@@ -627,10 +643,11 @@ def main():
                         "목표/손절 미달성 비율",
                         f"{performance['timeout_rate']:.1f}%"
                     )
-                    st.metric(
-                        "평균 최종 수익률",
-                        f"{performance['avg_max_return']:.1f}%"
-                    )
+                    if not performance['success_count'] + performance['loss_count'] == performance['total_signals']:
+                        st.metric(
+                            "미달성 건의 평균 수익률",
+                            f"{performance['avg_max_return']:.1f}%"
+                        )
             
             # 시그널 날짜 표시
             if total_signals > 0:
