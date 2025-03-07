@@ -214,7 +214,10 @@ def calculate_signals_for_ticker(ticker, start_date, end_date, params):
             cci_period=params['cci_period'],
             cci_signal=params['cci_signal'],
             rsi_period=params['rsi_period'],
-            rsi_signal=params['rsi_signal']
+            rsi_signal=params['rsi_signal'],
+            use_macd=params['use_macd'],
+            use_cci=params['use_cci'],
+            use_rsi=params['use_rsi']
         )
         return int(signals.sum())
     except:
@@ -234,7 +237,7 @@ def get_valid_date_range(interval):
         # "90m": {"days": 60, "default": 60-1},
         # "1h": {"days": 730, "default": 730-1},
         "1d": {"days": 10000, "default": 365*5},
-        # "5d": {"days": 10000, "default": 365*5},
+        #"5d": {"days": 10000, "default": 365*5},
         "1wk": {"days": 10000, "default": 365*5},
         "1mo": {"days": 10000, "default": 365*5},
         "3mo": {"days": 10000, "default": 365*5}
@@ -470,18 +473,43 @@ def main():
     st.sidebar.markdown("2) CCI가 Signal 이상으로 상승")
     st.sidebar.markdown("3) RSI가 Signal 이상으로 상승")
     # 전략 파라미터 설정
-    st.sidebar.subheader('MACD 파라미터')
-    macd_fast = st.sidebar.slider('MACD Fast Period', 5, 30, 12)
-    macd_slow = st.sidebar.slider('MACD Slow Period', 15, 50, 26)
-    macd_signal = st.sidebar.slider('MACD Signal Period', 5, 20, 9)
+    st.sidebar.subheader('지표 선택')
+    col1, col2, col3 = st.sidebar.columns(3)
+    with col1:
+        use_macd = st.checkbox('MACD', value=True)
+    with col2:
+        use_cci = st.checkbox('CCI', value=True)
+    with col3:
+        use_rsi = st.checkbox('RSI', value=True)
+    
+    if not (use_macd or use_cci or use_rsi):
+        st.sidebar.warning('최소 하나의 지표를 선택해주세요')
+        return
 
-    st.sidebar.subheader('CCI 파라미터')
-    cci_period = st.sidebar.slider('CCI Period', 5, 30, 14)
-    cci_signal = st.sidebar.slider('CCI Signal Period', 5, 20, 9)
+    # MACD 파라미터
+    if use_macd:
+        st.sidebar.subheader('MACD 파라미터')
+        macd_fast = st.sidebar.slider('MACD Fast Period', 5, 30, 12)
+        macd_slow = st.sidebar.slider('MACD Slow Period', 15, 50, 26)
+        macd_signal = st.sidebar.slider('MACD Signal Period', 5, 20, 9)
+    else:
+        macd_fast, macd_slow, macd_signal = 12, 26, 9
 
-    st.sidebar.subheader('RSI 파라미터')
-    rsi_period = st.sidebar.slider('RSI Period', 5, 30, 14)
-    rsi_signal = st.sidebar.slider('RSI Signal Period', 5, 20, 9)
+    # CCI 파라미터
+    if use_cci:
+        st.sidebar.subheader('CCI 파라미터')
+        cci_period = st.sidebar.slider('CCI Period', 5, 30, 14)
+        cci_signal = st.sidebar.slider('CCI Signal Period', 5, 20, 9)
+    else:
+        cci_period, cci_signal = 14, 9
+
+    # RSI 파라미터
+    if use_rsi:
+        st.sidebar.subheader('RSI 파라미터')
+        rsi_period = st.sidebar.slider('RSI Period', 5, 30, 14)
+        rsi_signal = st.sidebar.slider('RSI Signal Period', 5, 20, 9)
+    else:
+        rsi_period, rsi_signal = 14, 9
 
     # 전략 파라미터 설정 섹션 아래에 수익률 분석 파라미터 추가
     st.sidebar.subheader('수익률 분석 파라미터')
@@ -501,7 +529,10 @@ def main():
         'cci_period': cci_period,
         'cci_signal': cci_signal,
         'rsi_period': rsi_period,
-        'rsi_signal': rsi_signal
+        'rsi_signal': rsi_signal,
+        'use_macd': use_macd,
+        'use_cci': use_cci,
+        'use_rsi': use_rsi
     }
     
     # 캔들 주기가 변경되었거나 파라미터가 변경되었을 때 시그널 재계산
@@ -614,7 +645,10 @@ def main():
                 cci_period=cci_period,
                 cci_signal=cci_signal,
                 rsi_period=rsi_period,
-                rsi_signal=rsi_signal
+                rsi_signal=rsi_signal,
+                use_macd=use_macd,
+                use_cci=use_cci,
+                use_rsi=use_rsi
             )
             
             # 시그널 통계
