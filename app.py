@@ -250,17 +250,7 @@ def get_valid_date_range(interval):
 
 def analyze_signal_performance(df, signals, lookback_period, target_return, max_loss):
     """
-    시그널 발생 후 수익률 분석
-    
-    Args:
-        df: DataFrame with OHLCV data
-        signals: Boolean series indicating buy signals
-        lookback_period: Number of candles to look forward
-        target_return: Target return percentage
-        max_loss: Maximum loss percentage to monitor
-        
-    Returns:
-        Dictionary containing performance metrics
+    시그널 발생 후 수익률 분석 - 목표 수익률 또는 손절 수익률 도달 시 거래 종료
     """
     signal_dates = df[signals].index
     success_count = 0
@@ -277,30 +267,35 @@ def analyze_signal_performance(df, signals, lookback_period, target_return, max_
             
         # 시그널 발생 시점부터 lookback_period 동안의 데이터
         signal_price = df.iloc[idx]['close']
-        forward_prices_high = df.iloc[idx:idx + lookback_period + 1]['high']
-        forward_prices_low = df.iloc[idx:idx + lookback_period + 1]['low']
+        forward_slice = df.iloc[idx:idx + lookback_period + 1]
         
-        # 최대 수익률과 최대 손실률 계산
-        max_return = ((forward_prices_high.max() - signal_price) / signal_price * 100)
-        min_return = ((forward_prices_low.min() - signal_price) / signal_price * 100)
-        max_returns.append(max_return)
-        min_returns.append(min_return)
-        
-        # 목표 수익률 도달 여부 확인
-        if max_return >= target_return:
-            success_count += 1
-            # 목표 도달까지 걸린 캔들 수 계산
-            target_idx = forward_prices_high[forward_prices_high >= signal_price * (1 + target_return/100)].index[0]
-            days = (target_idx - signal_date).days
-            days_to_target.append(days)
-        
-        # 최대 손실 도달 여부 확인
-        if min_return <= -max_loss:
-            loss_count += 1
-            # 손실 발생까지 걸린 캔들 수 계산
-            loss_idx = forward_prices_low[forward_prices_low <= signal_price * (1 - max_loss/100)].index[0]
-            days = (loss_idx - signal_date).days
-            days_to_loss.append(days)
+        # 각 캔들에서 목표 수익률과 손절 수익률 도달 여부 확인
+        for i, row in forward_slice.iterrows():
+            high_return = ((row['high'] - signal_price) / signal_price * 100)
+            low_return = ((row['low'] - signal_price) / signal_price * 100)
+            
+            # 같은 캔들에서 고가가 목표 수익률, 저가가 손절 수익률에 도달한 경우
+            # 고가가 먼저 도달한 것으로 간주
+            if high_return >= target_return:
+                success_count += 1
+                days = (i - signal_date).days
+                days_to_target.append(days)
+                max_returns.append(high_return)
+                break
+            elif low_return <= -max_loss:
+                loss_count += 1
+                days = (i - signal_date).days
+                days_to_loss.append(days)
+                min_returns.append(low_return)
+                break
+            
+            # 마지막 캔들까지 목표 수익률이나 손절 수익률에 도달하지 못한 경우
+            if i == forward_slice.index[-1]:
+                # 최종 수익률 기록
+                max_return = ((forward_slice['high'].max() - signal_price) / signal_price * 100)
+                min_return = ((forward_slice['low'].min() - signal_price) / signal_price * 100)
+                max_returns.append(max_return)
+                min_returns.append(min_return)
     
     total_signals = len(signal_dates)
     if total_signals == 0:
@@ -313,19 +308,24 @@ def analyze_signal_performance(df, signals, lookback_period, target_return, max_
             'avg_days_to_loss': 0,
             'total_signals': 0,
             'success_count': 0,
-            'loss_count': 0
+            'loss_count': 0,
+            'timeout_count': 0
         }
+    
+    timeout_count = total_signals - success_count - loss_count
     
     return {
         'success_rate': (success_count / total_signals * 100) if total_signals > 0 else 0,
         'loss_rate': (loss_count / total_signals * 100) if total_signals > 0 else 0,
+        'timeout_rate': (timeout_count / total_signals * 100) if total_signals > 0 else 0,
         'avg_max_return': sum(max_returns) / len(max_returns) if max_returns else 0,
         'avg_min_return': sum(min_returns) / len(min_returns) if min_returns else 0,
         'avg_days_to_target': sum(days_to_target) / len(days_to_target) if days_to_target else 0,
         'avg_days_to_loss': sum(days_to_loss) / len(days_to_loss) if days_to_loss else 0,
         'total_signals': total_signals,
         'success_count': success_count,
-        'loss_count': loss_count
+        'loss_count': loss_count,
+        'timeout_count': timeout_count
     }
 
 def main():
@@ -596,37 +596,41 @@ def main():
                 st.subheader('시그널 성과 분석')
                 performance = analyze_signal_performance(df, signals, lookback_period, target_return, max_loss)
                 
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     st.markdown("##### 수익 분석")
                     st.metric(
-                        f"{lookback_period}캔들 내 {target_return}% 달성 확률",
+                        f"{lookback_period}캔들 내 {target_return}% 달성",
                         f"{performance['success_rate']:.1f}%"
-                    )
-                    st.metric(
-                        "평균 최대 수익률",
-                        f"{performance['avg_max_return']:.1f}%"
                     )
                     if performance['success_count'] > 0:
                         st.metric(
                             "목표 수익률 달성까지 평균 소요 기간",
-                            f"{performance['avg_days_to_target']:.1f}일"
+                            f"{performance['avg_days_to_target']:.1f}캔들"
                         )
+                
                 with col2:
                     st.markdown("##### 손실 분석")
                     st.metric(
-                        f"{lookback_period}캔들 내 {max_loss}% 손실 확률",
+                        f"{lookback_period}캔들 내 {max_loss}% 손실",
                         f"{performance['loss_rate']:.1f}%"
-                    )
-                    st.metric(
-                        "평균 최대 손실률",
-                        f"{performance['avg_min_return']:.1f}%"
                     )
                     if performance['loss_count'] > 0:
                         st.metric(
                             "손절 수익률 도달까지 평균 소요 기간",
-                            f"{performance['avg_days_to_loss']:.1f}일"
+                            f"{performance['avg_days_to_loss']:.1f}캔들"
                         )
+                
+                with col3:
+                    st.markdown("##### 미달성 분석")
+                    st.metric(
+                        "목표/손절 미달성 비율",
+                        f"{performance['timeout_rate']:.1f}%"
+                    )
+                    st.metric(
+                        "평균 최종 수익률",
+                        f"{performance['avg_max_return']:.1f}%"
+                    )
             
             # 시그널 날짜 표시
             if total_signals > 0:
