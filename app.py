@@ -650,9 +650,6 @@ def main():
                     # 사이드바의 종목 선택 업데이트
                     st.session_state.selected_ticker = next_ticker
                     st.rerun()
-
-            # 차트 표시
-            plot_analysis_streamlit(df, signals)
             
             # 수익률 분석 결과 표시
             if total_signals > 0:
@@ -703,6 +700,8 @@ def main():
                             f"{performance['avg_max_return']:.1f}%"
                         )
             
+            # 차트 표시
+            plot_analysis_streamlit(df, signals)
             # 시그널 날짜 표시
             if total_signals > 0:
                 st.subheader('시그널 발생 날짜')
