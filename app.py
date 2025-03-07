@@ -333,6 +333,22 @@ def analyze_signal_performance(df, signals, lookback_period, target_return, max_
         'total_return': sum(actual_returns) / len(actual_returns) if actual_returns else 0  # 전체 평균 수익률
     }
 
+def get_prev_next_tickers(current_ticker, sorted_tickers, show_only_signals=False, signal_counts=None):
+    """이전/다음 종목 찾기"""
+    if show_only_signals:
+        tickers = [t for t in sorted_tickers if signal_counts.get(t, 0) > 0]
+    else:
+        tickers = sorted_tickers
+    
+    if not tickers:
+        return None, None
+    
+    current_idx = tickers.index(current_ticker) if current_ticker in tickers else 0
+    prev_ticker = tickers[current_idx - 1] if current_idx > 0 else tickers[-1]
+    next_ticker = tickers[(current_idx + 1) % len(tickers)]
+    
+    return prev_ticker, next_ticker
+
 def main():
     st.title('주식 전략 분석기')
     
@@ -518,12 +534,20 @@ def main():
     st.sidebar.subheader('종목 선택')
     sorted_tickers = sorted(default_tickers.keys())
 
+    # 세션 상태에서 선택된 종목 가져오기
+    if 'selected_ticker' not in st.session_state:
+        st.session_state.selected_ticker = sorted_tickers[0]
+
     selected_ticker = st.sidebar.selectbox(
         '분석할 종목 선택',
         options=sorted_tickers,
+        index=sorted_tickers.index(st.session_state.selected_ticker),
         format_func=lambda x: f'{x} - {default_tickers[x]} ({st.session_state.signal_counts.get(x, 0)}개 시그널)'
     )
     
+    # 선택된 종목 세션 상태 업데이트
+    st.session_state.selected_ticker = selected_ticker
+
     # 시그널 수가 있는 종목만 보기 옵션
     show_only_signals = st.sidebar.checkbox('시그널이 있는 종목만 보기')
     if show_only_signals:
@@ -596,6 +620,36 @@ def main():
             # 시그널 통계
             total_signals = signals.sum()
             st.sidebar.metric("발견된 시그널 수", total_signals)
+
+            # 차트 위에 이전/다음 버튼과 현재 종목 정보 표시
+            col1, col2, col3 = st.columns([1, 3, 1])
+            
+            # 이전/다음 종목 가져오기
+            prev_ticker, next_ticker = get_prev_next_tickers(
+                ticker, 
+                sorted_tickers, 
+                show_only_signals,
+                st.session_state.signal_counts
+            )
+            
+            with col1:
+                if st.button("⬅️ 이전", key="prev_ticker"):
+                    # 세션 상태 초기화하여 새로운 데이터 로드 강제
+                    st.session_state.ohlcv_data = None
+                    # 사이드바의 종목 선택 업데이트
+                    st.session_state.selected_ticker = prev_ticker
+                    st.rerun()
+            
+            with col2:
+                st.markdown(f"### {ticker} - {default_tickers[ticker]} ({st.session_state.signal_counts.get(ticker, 0)}개 시그널)")
+            
+            with col3:
+                if st.button("다음 ➡️", key="next_ticker"):
+                    # 세션 상태 초기화하여 새로운 데이터 로드 강제
+                    st.session_state.ohlcv_data = None
+                    # 사이드바의 종목 선택 업데이트
+                    st.session_state.selected_ticker = next_ticker
+                    st.rerun()
 
             # 차트 표시
             plot_analysis_streamlit(df, signals)
