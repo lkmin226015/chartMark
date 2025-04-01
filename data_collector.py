@@ -4,9 +4,7 @@ from datetime import datetime, timedelta
 import os
 
 def get_valid_date_range(interval):
-    """선택된 캔들 주기에 따른 유효한 날짜 범위 반환"""
-    today = datetime(2025, 2, 19, 13, 20, 37, 106915)
-    
+    """선택된 캔들 주기에 따른 유효한 날짜 범위 반환"""        
     intervals = {
         "1m": {"days": 7, "default": 7-1},
         "2m": {"days": 60, "default": 60-1},
@@ -28,7 +26,7 @@ def get_valid_date_range(interval):
 def collect_stock_data(ticker, interval="1d"):
     """특정 티커의 데이터를 수집하고 저장"""
     intervals = get_valid_date_range(interval)
-    today = datetime(2025, 2, 19, 13, 20, 37, 106915)
+    today = datetime(2025, 3, 31, 13, 20, 37, 106915)
     
     if interval not in intervals:
         print(f"Invalid interval: {interval}")

@@ -225,7 +225,7 @@ def calculate_signals_for_ticker(ticker, start_date, end_date, params):
 
 def get_valid_date_range(interval):
     """선택된 캔들 주기에 따른 유효한 날짜 범위 반환"""
-    today = datetime(2025, 2, 19, 13, 20, 37, 106915)
+    today = datetime(2025, 3, 31, 13, 20, 37, 106915)
     
     intervals = {
         "1m": {"days": 7, "default": 7-1},
